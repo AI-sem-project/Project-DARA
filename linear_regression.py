@@ -1,54 +1,100 @@
-"""Linear regression engines using the Normal Equation (matrix math only)."""
+"""Simple Linear Regression engine using the Normal Equation."""
+
+from typing import List
 
 import numpy as np
 
 
-# ============================================================
-# ENGINE 1: Simple Linear Regression (1 feature)
-# theta = (X^T X)^-1 X^T y
-# ============================================================
+class SimpleLinearRegression:
+    def __init__(self):
+        self.coefficients = None
 
-def fit_simple(x, y):
-    """Fit a simple linear regression model using the normal equation.
+    def fit(self, x: List[float | int], y: List[float | int]) -> None:
+        """Fits the Simple Linear Regression model using training data.
 
-    Args:
-        x: 1D array-like of a single feature's values.
-        y: 1D array-like of target values.
+        Mathematical Explanation:
+            Builds the design matrix by prepending an intercept
+            column of ones to x, then solves the Normal Equation:
 
-    Returns:
-        A 1D numpy array [theta_0, theta_1] representing the
-        intercept and slope.
-    """
-    x = np.array(x, dtype=float).reshape(-1, 1)
-    y = np.array(y, dtype=float).reshape(-1, 1)
+                theta = (X^T X)^-1 X^T y
 
-    design_matrix = np.hstack([np.ones((x.shape[0], 1)), x])
+        Args:
+            x:
+                Training feature values (single feature).
+            y:
+                Training targets, one per value in x.
 
-    transpose = design_matrix.T
-    theta = np.linalg.inv(transpose @ design_matrix) @ transpose @ y
+        Returns:
+            None
 
-    return theta.flatten()
+        Raises:
+            ValueError: If x or y are empty, or if their lengths do
+                not match.
+        """
+        self._validate_fit_input(x, y)
 
+        x_np = np.array(x, dtype=float).reshape(-1, 1)
+        y_np = np.array(y, dtype=float).reshape(-1, 1)
 
-def predict_simple(x, theta):
-    """Generate predictions from a fitted simple linear regression model.
+        design_matrix = np.hstack([np.ones((x_np.shape[0], 1)), x_np])
 
-    Args:
-        x: 1D array-like of a single feature's values.
-        theta: Fitted coefficient vector [theta_0, theta_1].
+        transpose_design = design_matrix.T
+        gram_matrix = transpose_design @ design_matrix
 
-    Returns:
-        A numpy array of predicted values.
-    """
-    x = np.array(x, dtype=float).reshape(-1, 1)
-    design_matrix = np.hstack([np.ones((x.shape[0], 1)), x])
+        theta = np.linalg.inv(gram_matrix) @ transpose_design @ y_np
+        self.coefficients = theta.flatten().tolist()
 
-    return design_matrix @ theta
+    def predict(self, x: List[float | int]) -> List[float | int]:
+        """Applies the learned linear model to generate predictions.
 
+        Mathematical Explanation:
+            Applies the learned linear model:
 
+                y_hat = theta_0 + theta_1 * x
 
+        Args:
+            x:
+                Input feature values to predict on.
 
+        Returns:
+            A list of predicted target values, one per value in x.
 
+        Raises:
+            RuntimeError: If called before `fit()`.
+        """
+        if self.coefficients is None:
+            raise RuntimeError("Model must be fit before calling predict().")
 
+        x_np = np.array(x, dtype=float).reshape(-1, 1)
+        design_matrix = np.hstack([np.ones((x_np.shape[0], 1)), x_np])
+        theta_np = np.array(self.coefficients, dtype=float).reshape(-1, 1)
 
+        predictions_np = design_matrix @ theta_np
+        return predictions_np.flatten().tolist()
 
+    @staticmethod
+    def _validate_fit_input(
+        x: List[float | int], y: List[float | int]
+    ) -> None:
+        """Validates training data shape and consistency.
+
+        Args:
+            x:
+                Training feature values.
+            y:
+                Training targets.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If x or y are empty, or lengths mismatch.
+        """
+        if not x or not y:
+            raise ValueError("x and y must not be empty.")
+
+        if len(x) != len(y):
+            raise ValueError(
+                f"x and y must have the same number of samples "
+                f"(got {len(x)} and {len(y)})."
+            )
