@@ -1,5 +1,5 @@
 """
-orchestration.py
+main.py
 ----------------
 The Command Center for Project DARA.
 Handles pipeline execution, metrics calculation from scratch, 
