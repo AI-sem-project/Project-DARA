@@ -41,7 +41,7 @@ class SimpleLinearRegression:
         transpose_design = design_matrix.T
         gram_matrix = transpose_design @ design_matrix
 
-        theta = np.linalg.inv(gram_matrix) @ transpose_design @ y_np
+        theta = np.linalg.pinv(gram_matrix) @ transpose_design @ y_np
         self.coefficients = theta.flatten().tolist()
 
     def predict(self, x: List[float | int]) -> List[float | int]:

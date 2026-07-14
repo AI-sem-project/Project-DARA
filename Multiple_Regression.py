@@ -44,7 +44,7 @@ class MultipleLinearRegression:
         transpose_design = design_matrix_np.T
         gram_matrix = transpose_design @ design_matrix_np
 
-        theta = np.linalg.inv(gram_matrix) @ transpose_design @ targets_np
+        theta = np.linalg.pinv(gram_matrix) @ transpose_design @ targets_np
         self.coefficients = theta.flatten().tolist()
 
     def predict(self, X: List[List[float | int]]) -> List[float | int]:
