@@ -11,10 +11,10 @@ import numpy as np
 from Preprocessing import run_preprocessing_pipeline
 
 # Import the four Regression Engines
-from linear_regression import SimpleLinearRegression
-from multiple_regression import MultipleLinearRegression
+from Linear_Regression import SimpleLinearRegression
+from Multiple_Regression import MultipleLinearRegression
 from Ridge_Regression import RidgeRegression
-from Polynomial_Regression import PolynomialRegression
+from Polynomial_Regression import PolynomialRegres
 
 
 # ========================================================
