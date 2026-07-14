@@ -14,7 +14,7 @@ from Preprocessing import run_preprocessing_pipeline
 from Linear_Regression import SimpleLinearRegression
 from Multiple_Regression import MultipleLinearRegression
 from Ridge_Regression import RidgeRegression
-from Polynomial_Regression import PolynomialRegres
+from Polynomial_Regression import PolynomialRegression
 
 
 # ========================================================
