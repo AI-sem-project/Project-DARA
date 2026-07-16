@@ -119,7 +119,7 @@ def main():
     print("Please enter the following 6 structural specifications:")
 
     # Gather user feature inputs
-    ui_location     = input("1. Enter Location (e.g., Kathmandu, Lalitpur, Bhaktapur   : ").strip()
+    ui_location     = input("1. Enter Location (e.g., Kathmandu, Lalitpur, Bhaktapur)   : ").strip()
     ui_bedrooms     = float(input("2. Enter Number of Bedrooms (e.g., 4)               : "))
     ui_floors       = float(input("3. Enter Number of Floors (e.g., 2.5)               : "))
     ui_facing       = input("4. Enter House Facing Direction (e.g., North, West) : ").strip()
