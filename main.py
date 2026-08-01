@@ -136,7 +136,7 @@ def build_engine_instances() -> dict:
     return {
         "Simple Linear Regression": SimpleLinearRegression(),
         "Multiple Linear Regression": MultipleLinearRegression(),
-        "Ridge Regression (lambda=1.0)": RidgeRegression(lambda_=1.0),
+        "Ridge Regression (lambda=1.0)": RidgeRegression(lambda_=1.0, degree = 1),
         "Polynomial Regression (degree=2)": PolynomialRegression(degree=2),
     }
 
