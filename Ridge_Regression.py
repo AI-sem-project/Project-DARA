@@ -22,7 +22,7 @@ Design constraints (per Project DARA specification):
       etc.) are used. Everything is implemented from first principles.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -53,7 +53,7 @@ class RidgeRegression:
             `fit()` has been called.
     """
 
-    def __init__(self, lambda_: float = 1.0) -> None:
+    def __init__(self, lambda_: float = 1.0, degree: int = 1) -> None:
         """Initializes the Ridge Regression model.
 
         Args:
@@ -66,10 +66,15 @@ class RidgeRegression:
         """
         if lambda_ < 0:
             raise ValueError("lambda_ must be >= 0.")
+        if degree < 1:
+            raise ValueError("degree must be >= 1.")
+
 
         self.lambda_: float = lambda_
+        self.degree: int = degree
         self.coefficients: Optional[List[float]] = None
         self._num_features: Optional[int] = None
+        self._exponent_table: Optional[List[Tuple[int, ...]]] = None
 
     def fit(self, X: List[List[float]], y: List[float]) -> None:
         """Fits the Ridge Regression model using the training data.
@@ -103,7 +108,11 @@ class RidgeRegression:
         self._validate_fit_input(X, y)
 
         self._num_features = len(X[0])
-        design_matrix = self._add_intercept(X)
+        self._exponent_table = self._build_exponent_table(
+            self._num_features, self.degree
+        )
+
+        design_matrix = self._generate_polynomial_features(X)
 
         design_matrix_np = np.array(design_matrix, dtype=float)
         targets_np = np.array(y, dtype=float).reshape(-1, 1)
@@ -144,31 +153,134 @@ class RidgeRegression:
             ValueError: If the number of features in X does not match
                 the number of features seen during training.
         """
-        if self.coefficients is None:
+        if self.coefficients is None or self._exponent_table is None:
             raise RuntimeError("Model must be fit before calling predict().")
 
         self._validate_predict_input(X)
 
-        design_matrix = self._add_intercept(X)
+        design_matrix = self._generate_polynomial_features(X)
         design_matrix_np = np.array(design_matrix, dtype=float)
         theta_np = np.array(self.coefficients, dtype=float).reshape(-1, 1)
 
         predictions_np = design_matrix_np @ theta_np
         return predictions_np.flatten().tolist()
 
-    @staticmethod
-    def _add_intercept(X: List[List[float]]) -> List[List[float]]:
-        """Prepends a column of ones to the feature matrix.
+    def _generate_polynomial_features(
+        self, X: List[List[float]]
+    ) -> List[List[float]]:
+        """Expands raw features into the full polynomial feature space.
+
+        Mathematical Explanation:
+            For each row x = (x_1, ..., x_n), and for each exponent
+            tuple (e_1, ..., e_n) in the pre-built exponent table
+            (covering every combination with 0 <= sum(e_i) <= degree),
+            computes the monomial:
+
+                x_1^(e_1) * x_2^(e_2) * ... * x_n^(e_n)
+
+            The all-zero exponent tuple produces the constant "1"
+            term, which serves as the intercept, so no separate
+            intercept column needs to be added manually.
 
         Args:
             X:
                 Input features as a list of rows.
 
         Returns:
-            A new list of rows, each prefixed with a leading 1.0 to
-            represent the intercept term.
+            A list of rows, each containing the expanded polynomial
+            features in a fixed, degree-ordered sequence.
         """
-        return [[1.0] + [float(value) for value in row] for row in X]
+        expanded_rows: List[List[float]] = []
+        for row in X:
+            expanded_row = [
+                self._evaluate_monomial(row, exponents)
+                for exponents in self._exponent_table
+            ]
+            expanded_rows.append(expanded_row)
+        return expanded_rows
+
+    @staticmethod
+    def _evaluate_monomial(
+            row: List[float], exponents: Tuple[int, ...]
+    ) -> float:
+        """Evaluates a single monomial term for one data row.
+
+        Args:
+            row:
+                A single sample's raw feature values.
+            exponents:
+                Exponent to apply to each corresponding feature.
+
+        Returns:
+            The product of each feature raised to its exponent.
+        """
+        value = 1.0
+        for feature_value, exponent in zip(row, exponents):
+            if exponent != 0:
+                value *= float(feature_value) ** exponent
+        return value
+
+    @classmethod
+    def _build_exponent_table(
+            cls, num_features: int, degree: int
+    ) -> List[Tuple[int, ...]]:
+        """Builds the ordered list of exponent tuples for the expansion.
+
+        Mathematical Explanation:
+            Generates every exponent tuple (e_1, ..., e_n) such that
+            0 <= sum(e_i) <= degree, ordered by increasing total
+            degree. Within each total degree, tuples are generated by
+            recursively assigning the largest possible exponent to
+            the earliest feature first, which reproduces the standard
+            expansion order (e.g. x^2, x*y, y^2 for two features at
+            degree 2).
+
+        Args:
+            num_features:
+                Number of raw input features.
+            degree:
+                Maximum total polynomial degree.
+
+        Returns:
+            A list of exponent tuples, one per generated polynomial
+            term, ordered from the constant term up to the highest
+            degree terms.
+        """
+        exponent_table: List[Tuple[int, ...]] = []
+        for total_degree in range(0, degree + 1):
+            exponent_table.extend(
+                cls._tuples_with_fixed_sum(num_features, total_degree)
+            )
+        return exponent_table
+
+    @classmethod
+    def _tuples_with_fixed_sum(
+            cls, num_slots: int, target_sum: int
+    ) -> List[Tuple[int, ...]]:
+        """Recursively generates exponent tuples summing to a fixed value.
+
+        Args:
+            num_slots:
+                Number of features (positions) remaining to assign.
+            target_sum:
+                Total exponent sum that the tuple must add up to.
+
+        Returns:
+            A list of tuples of length `num_slots`, each summing
+            exactly to `target_sum`, ordered from the largest first
+            exponent to the smallest.
+        """
+        if num_slots == 1:
+            return [(target_sum,)]
+
+        tuples: List[Tuple[int, ...]] = []
+        for first_exponent in range(target_sum, -1, -1):
+            remaining_sum = target_sum - first_exponent
+            for remainder in cls._tuples_with_fixed_sum(
+                    num_slots - 1, remaining_sum
+            ):
+                tuples.append((first_exponent,) + remainder)
+        return tuples
 
     @staticmethod
     def _validate_fit_input(X: List[List[float]], y: List[float]) -> None:
