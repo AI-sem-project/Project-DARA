@@ -41,7 +41,7 @@ class PolynomialRegression:
 
         For degree 3:
             1, x, y, x^2, x*y, y^2, x^3, x^2*y, x*y^2, y^3
-
+(n+d)!/n!.d!
         Once expanded, the model solves:
             theta = (Phi^T Phi)^(-1) Phi^T y
 
